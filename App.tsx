@@ -6,6 +6,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { WalletProvider } from './app/contexts/WalletContext';
 import { HomeScreen } from './app/screens/HomeScreen';
 import { ProfileScreen } from './app/screens/ProfileScreen';
 
@@ -35,27 +36,29 @@ class ErrorBoundary extends React.Component {
 export default function App() {
   return (
     <ErrorBoundary>
-      <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={{
-            headerShown: false,
-            tabBarStyle: { backgroundColor: '#1A1A1A', borderTopColor: '#2A2A2A' },
-            tabBarActiveTintColor: '#14F195',
-            tabBarInactiveTintColor: '#666666',
-          }}
-        >
-          <Tab.Screen 
-            name="Home" 
-            component={HomeScreen}
-            options={{ tabBarLabel: 'Challenges' }}
-          />
-          <Tab.Screen 
-            name="Profile" 
-            component={ProfileScreen}
-            options={{ tabBarLabel: 'Profile' }}
-          />
-        </Tab.Navigator>
-      </NavigationContainer>
+      <WalletProvider>
+        <NavigationContainer>
+          <Tab.Navigator
+            screenOptions={{
+              headerShown: false,
+              tabBarStyle: { backgroundColor: '#1A1A1A', borderTopColor: '#2A2A2A' },
+              tabBarActiveTintColor: '#14F195',
+              tabBarInactiveTintColor: '#666666',
+            }}
+          >
+            <Tab.Screen 
+              name="Home" 
+              component={HomeScreen}
+              options={{ tabBarLabel: 'Challenges' }}
+            />
+            <Tab.Screen 
+              name="Profile" 
+              component={ProfileScreen}
+              options={{ tabBarLabel: 'Profile' }}
+            />
+          </Tab.Navigator>
+        </NavigationContainer>
+      </WalletProvider>
     </ErrorBoundary>
   );
 }

@@ -9,7 +9,7 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
-import { useWallet, formatPublicKey, formatSOL } from '../hooks/useWallet';
+import { useWallet, formatPublicKey, formatSOL } from '../contexts/WalletContext';
 
 interface Challenge {
   id: string;
@@ -22,7 +22,7 @@ interface Challenge {
 }
 
 export const HomeScreen = () => {
-  const wallet = useWallet();
+  const { publicKey, isConnected, balance, connect, disconnect } = useWallet();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [userStreak] = useState(7);
@@ -117,19 +117,19 @@ export const HomeScreen = () => {
         </View>
         <TouchableOpacity
           style={styles.walletButton}
-          onPress={wallet.isConnected ? wallet.disconnect : wallet.connect}
+          onPress={isConnected ? disconnect : connect}
         >
-          {wallet.isConnected ? (
+          {isConnected ? (
             <View>
-              <Text style={styles.walletAddress}>{formatPublicKey(wallet.publicKey)}</Text>
-              <Text style={styles.walletBalance}>{formatSOL(wallet.balance)}</Text>
+              <Text style={styles.walletAddress}>{formatPublicKey(publicKey)}</Text>
+              <Text style={styles.walletBalance}>{formatSOL(balance)}</Text>
             </View>
           ) : (
             <Text style={styles.connectText}>Connect Wallet</Text>
           )}
         </TouchableOpacity>
       </View>
-      {wallet.isConnected && (
+      {isConnected && (
         <View style={styles.streakBanner}>
           <Text style={styles.streakEmoji}>🔥</Text>
           <View>
@@ -145,10 +145,10 @@ export const HomeScreen = () => {
         contentContainerStyle={styles.listContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#14F195" />}
       />
-      {!wallet.isConnected && (
+      {!isConnected && (
         <View style={styles.connectPrompt}>
           <Text style={styles.connectPromptText}>Connect your wallet to join challenges</Text>
-          <TouchableOpacity style={styles.connectPromptButton} onPress={wallet.connect}>
+          <TouchableOpacity style={styles.connectPromptButton} onPress={connect}>
             <Text style={styles.connectPromptButtonText}>Connect Now</Text>
           </TouchableOpacity>
         </View>

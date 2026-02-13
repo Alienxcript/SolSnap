@@ -1,10 +1,10 @@
 // app/screens/ProfileScreen.tsx
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
-import { useWallet, formatPublicKey, formatSOL } from '../hooks/useWallet';
+import { useWallet, formatPublicKey, formatSOL } from '../contexts/WalletContext';
 
 export const ProfileScreen = () => {
-  const wallet = useWallet();
+  const { publicKey, isConnected, balance, connect, disconnect } = useWallet();
 
   return (
     <View style={styles.container}>
@@ -14,19 +14,19 @@ export const ProfileScreen = () => {
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
 
-        {wallet.isConnected ? (
+        {isConnected ? (
           <>
             <View style={styles.walletCard}>
               <Text style={styles.sectionTitle}>Wallet</Text>
               <View style={styles.walletInfo}>
                 <Text style={styles.label}>Address</Text>
-                <Text style={styles.value}>{formatPublicKey(wallet.publicKey)}</Text>
+                <Text style={styles.value}>{formatPublicKey(publicKey)}</Text>
               </View>
               <View style={styles.walletInfo}>
                 <Text style={styles.label}>Balance</Text>
-                <Text style={styles.valueHighlight}>{formatSOL(wallet.balance)}</Text>
+                <Text style={styles.valueHighlight}>{formatSOL(balance)}</Text>
               </View>
-              <TouchableOpacity style={styles.disconnectButton} onPress={wallet.disconnect}>
+              <TouchableOpacity style={styles.disconnectButton} onPress={disconnect}>
                 <Text style={styles.disconnectButtonText}>Disconnect Wallet</Text>
               </TouchableOpacity>
             </View>
@@ -60,7 +60,7 @@ export const ProfileScreen = () => {
             <Text style={styles.emptyEmoji}>👛</Text>
             <Text style={styles.emptyTitle}>No Wallet Connected</Text>
             <Text style={styles.emptyText}>Connect your wallet to view your profile</Text>
-            <TouchableOpacity style={styles.connectButton} onPress={wallet.connect}>
+            <TouchableOpacity style={styles.connectButton} onPress={connect}>
               <Text style={styles.connectButtonText}>Connect Wallet</Text>
             </TouchableOpacity>
           </View>
