@@ -1,51 +1,15 @@
 // app/contexts/WalletContext.tsx
-import React, { createContext, useContext, useReducer, useCallback, ReactNode } from 'react';
-import { PublicKey, Connection, clusterApiUrl } from '@solana/web3.js';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { PublicKey, Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
-interface WalletState {
-  publicKey: PublicKey | null;
-  isConnected: boolean;
+interface WalletContextType {
+  publicKey: string | null;
   balance: number | null;
+  isConnected: boolean;
   isConnecting: boolean;
-}
-
-type WalletAction =
-  | { type: 'CONNECTING' }
-  | { type: 'CONNECTED'; publicKey: PublicKey; balance: number }
-  | { type: 'DISCONNECTED' }
-  | { type: 'ERROR' };
-
-const initialState: WalletState = {
-  publicKey: null,
-  isConnected: false,
-  balance: null,
-  isConnecting: false,
-};
-
-function walletReducer(state: WalletState, action: WalletAction): WalletState {
-  switch (action.type) {
-    case 'CONNECTING':
-      return { ...state, isConnecting: true };
-    case 'CONNECTED':
-      return {
-        publicKey: action.publicKey,
-        balance: action.balance,
-        isConnected: true,
-        isConnecting: false,
-      };
-    case 'DISCONNECTED':
-      return initialState;
-    case 'ERROR':
-      return { ...initialState, isConnecting: false };
-    default:
-      return state;
-  }
-}
-
-interface WalletContextType extends WalletState {
   connect: () => Promise<void>;
   disconnect: () => void;
 }
@@ -53,10 +17,37 @@ interface WalletContextType extends WalletState {
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export const WalletProvider = ({ children }: { children: ReactNode }) => {
-  const [state, dispatch] = useReducer(walletReducer, initialState);
+  const [publicKey, setPublicKey] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  // Fetch balance whenever publicKey changes
+  useEffect(() => {
+    if (!publicKey) {
+      setBalance(null);
+      return;
+    }
+
+    const fetchBalance = async () => {
+      try {
+        const pubKey = new PublicKey(publicKey);
+        const lamports = await connection.getBalance(pubKey);
+        setBalance(lamports / LAMPORTS_PER_SOL);
+      } catch (error) {
+        console.error('Error fetching balance:', error);
+        setBalance(null);
+      }
+    };
+
+    fetchBalance();
+
+    // Poll for balance updates every 10 seconds
+    const interval = setInterval(fetchBalance, 10000);
+    return () => clearInterval(interval);
+  }, [publicKey]);
 
   const connect = useCallback(async () => {
-    dispatch({ type: 'CONNECTING' });
+    setIsConnecting(true);
     
     try {
       await transact(async (wallet) => {
@@ -69,30 +60,32 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           },
         });
 
-        const pubKey = new PublicKey(authResult.accounts[0].address);
-        const bal = await connection.getBalance(pubKey);
-        
-        // Dispatch AFTER getting all data
-        setTimeout(() => {
-          dispatch({ 
-            type: 'CONNECTED', 
-            publicKey: pubKey, 
-            balance: bal / 1e9 
-          });
-        }, 100);
+        // Set publicKey as STRING - this triggers the useEffect to fetch balance
+        setPublicKey(authResult.accounts[0].address);
       });
     } catch (error) {
       console.error('Wallet connection failed:', error);
-      dispatch({ type: 'ERROR' });
+    } finally {
+      setIsConnecting(false);
     }
   }, []);
 
   const disconnect = useCallback(() => {
-    dispatch({ type: 'DISCONNECTED' });
+    setPublicKey(null);
+    setBalance(null);
   }, []);
 
   return (
-    <WalletContext.Provider value={{ ...state, connect, disconnect }}>
+    <WalletContext.Provider 
+      value={{ 
+        publicKey, 
+        balance, 
+        isConnected: publicKey !== null,
+        isConnecting,
+        connect, 
+        disconnect 
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );
@@ -106,10 +99,9 @@ export const useWallet = () => {
   return context;
 };
 
-export const formatPublicKey = (publicKey: PublicKey | null): string => {
+export const formatPublicKey = (publicKey: string | null): string => {
   if (!publicKey) return '';
-  const key = publicKey.toBase58();
-  return `${key.slice(0, 4)}...${key.slice(-4)}`;
+  return `${publicKey.slice(0, 4)}...${publicKey.slice(-4)}`;
 };
 
 export const formatSOL = (amount: number | null): string => {
