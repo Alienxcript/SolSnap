@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { PublicKey, Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
+import { toUint8Array } from '@solana-mobile/mobile-wallet-adapter-protocol';
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
@@ -48,7 +49,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
   const connect = useCallback(async () => {
     setIsConnecting(true);
-    
+
     try {
       await transact(async (wallet) => {
         const authResult = await wallet.authorize({
@@ -60,21 +61,20 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
           },
         });
 
-        // Convert to base58 and set state - both inside transact
-        const rawAddress = authResult.accounts[0].address;
-        
-        try {
-          const pubKey = new PublicKey(rawAddress);
-          const base58Address = pubKey.toBase58();
-          setPublicKey(base58Address);
-        } catch (conversionError) {
-          // If rawAddress is already base58, use it directly
-          console.log('Address conversion note:', conversionError);
-          setPublicKey(rawAddress);
-        }
+        // ✅ FIX: MWA returns address as a base64-encoded byte array.
+        // We must convert it using toUint8Array first, then wrap in PublicKey.
+        // Passing the raw value directly to PublicKey produces the wrong address.
+        const account = authResult.accounts[0];
+        const addressBytes = toUint8Array(account.address);
+        const pubKey = new PublicKey(addressBytes);
+        const base58Address = pubKey.toBase58();
+
+        console.log('✅ Wallet connected:', base58Address);
+        setPublicKey(base58Address);
       });
     } catch (error) {
       console.error('Wallet connection failed:', error);
+      setPublicKey(null);
     } finally {
       setIsConnecting(false);
     }
@@ -86,14 +86,14 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   return (
-    <WalletContext.Provider 
-      value={{ 
-        publicKey, 
-        balance, 
+    <WalletContext.Provider
+      value={{
+        publicKey,
+        balance,
         isConnected: publicKey !== null,
         isConnecting,
-        connect, 
-        disconnect 
+        connect,
+        disconnect,
       }}
     >
       {children}
