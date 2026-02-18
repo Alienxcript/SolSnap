@@ -22,7 +22,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [balance, setBalance] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
 
-  // Fetch balance whenever publicKey changes
   useEffect(() => {
     if (!publicKey) {
       setBalance(null);
@@ -41,17 +40,21 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     };
 
     fetchBalance();
-
-    // Poll for balance updates every 10 seconds
     const interval = setInterval(fetchBalance, 10000);
     return () => clearInterval(interval);
   }, [publicKey]);
 
   const connect = useCallback(async () => {
+    console.log('🔵 [1] Connect button pressed');
     setIsConnecting(true);
 
     try {
+      console.log('🔵 [2] Starting transact...');
+      
       await transact(async (wallet) => {
+        console.log('🔵 [3] Inside transact callback, wallet object:', !!wallet);
+        
+        console.log('🔵 [4] Calling wallet.authorize...');
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
@@ -60,27 +63,55 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
             icon: 'favicon.ico',
           },
         });
+        
+        console.log('🔵 [5] Authorization result received:', {
+          accountsCount: authResult.accounts.length,
+          authToken: !!authResult.auth_token,
+          walletUriBase: authResult.wallet_uri_base,
+        });
 
-        // ✅ FIX: MWA returns address as a base64-encoded byte array.
-        // We must convert it using toUint8Array first, then wrap in PublicKey.
-        // Passing the raw value directly to PublicKey produces the wrong address.
+        if (!authResult.accounts || authResult.accounts.length === 0) {
+          throw new Error('No accounts returned from wallet');
+        }
+
         const account = authResult.accounts[0];
+        console.log('🔵 [6] Raw account data:', {
+          addressType: typeof account.address,
+          addressLength: account.address?.length,
+          label: account.label,
+        });
+
+        console.log('🔵 [7] Converting address to Uint8Array...');
         const addressBytes = toUint8Array(account.address);
+        console.log('🔵 [8] Address bytes:', {
+          bytesLength: addressBytes.length,
+          firstBytes: Array.from(addressBytes.slice(0, 8)),
+        });
+
+        console.log('🔵 [9] Creating PublicKey from bytes...');
         const pubKey = new PublicKey(addressBytes);
         const base58Address = pubKey.toBase58();
-
-        console.log('✅ Wallet connected:', base58Address);
+        
+        console.log('🔵 [10] ✅ Final address:', base58Address);
+        console.log('🔵 [11] Setting state...');
         setPublicKey(base58Address);
+        console.log('🔵 [12] State set successfully');
       });
+      
+      console.log('🔵 [13] ✅ Transact completed successfully');
+      
     } catch (error) {
-      console.error('Wallet connection failed:', error);
+      console.error('🔴 [ERROR] Connection failed at step:', error);
+      console.error('🔴 [ERROR] Full error object:', JSON.stringify(error, null, 2));
       setPublicKey(null);
     } finally {
+      console.log('🔵 [14] Setting isConnecting to false');
       setIsConnecting(false);
     }
   }, []);
 
   const disconnect = useCallback(() => {
+    console.log('🔵 Disconnecting wallet');
     setPublicKey(null);
     setBalance(null);
   }, []);
