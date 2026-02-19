@@ -13,11 +13,11 @@ import {
 import { useWallet, formatSOL } from '../contexts/WalletContext';
 import { 
   PublicKey, 
-  Transaction, 
-  SystemProgram, 
-  LAMPORTS_PER_SOL,
   Connection,
   clusterApiUrl,
+  SystemProgram, 
+  LAMPORTS_PER_SOL,
+  Transaction,
 } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 
@@ -92,7 +92,8 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
 
     try {
       await transact(async (wallet) => {
-        // Authorize the wallet
+        console.log('[1] Authorizing...');
+        
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
@@ -102,7 +103,7 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           },
         });
 
-        // Decode the user's public key using atob (the correct method)
+        console.log('[2] Decoding address...');
         const binaryString = atob(authResult.accounts[0].address);
         const bytesArray = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -110,19 +111,19 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
         }
         const userPubkey = new PublicKey(bytesArray);
 
-        console.log('Creating transaction to stake:', challenge.stakeAmount, 'SOL');
-        console.log('From:', userPubkey.toBase58());
-        console.log('To:', CHALLENGE_VAULT.toBase58());
+        console.log('[3] From:', userPubkey.toBase58());
+        console.log('[4] To:', CHALLENGE_VAULT.toBase58());
+        console.log('[5] Amount:', challenge.stakeAmount, 'SOL');
 
-        // Get recent blockhash
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
+        console.log('[6] Getting blockhash...');
+        const latestBlockhash = await connection.getLatestBlockhash();
 
-        // Create transaction to send SOL to challenge vault
-        const transaction = new Transaction({
-          feePayer: userPubkey,
-          blockhash,
-          lastValidBlockHeight,
-        }).add(
+        console.log('[7] Building transaction...');
+        const transaction = new Transaction();
+        transaction.feePayer = userPubkey;
+        transaction.recentBlockhash = latestBlockhash.blockhash;
+        
+        transaction.add(
           SystemProgram.transfer({
             fromPubkey: userPubkey,
             toPubkey: CHALLENGE_VAULT,
@@ -130,49 +131,45 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           })
         );
 
-        console.log('Transaction created, signing...');
-
-        // Sign and send transaction
-        const signedTransactions = await wallet.signAndSendTransactions({
+        console.log('[8] Sending to wallet...');
+        
+        // Pass transactions array directly (MWA handles signing and sending)
+        const result = await wallet.signAndSendTransactions({
           transactions: [transaction],
         });
 
-        const signature = signedTransactions[0];
-        console.log('Transaction sent:', signature);
+        const signature = result[0];
+        console.log('[9] ✅ Sent! Sig:', signature);
 
-        // Wait for confirmation
-        console.log('Waiting for confirmation...');
-        const confirmation = await connection.confirmTransaction({
+        // Confirm
+        await connection.confirmTransaction({
           signature,
-          blockhash,
-          lastValidBlockHeight,
-        }, 'confirmed');
+          blockhash: latestBlockhash.blockhash,
+          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+        });
 
-        if (confirmation.value.err) {
-          throw new Error('Transaction failed to confirm');
-        }
+        console.log('[10] ✅ Confirmed!');
 
-        console.log('Transaction confirmed!');
-
-        // Update UI
         setHasJoined(true);
         
         Alert.alert(
           'Success! 🎉',
-          `You've staked ${challenge.stakeAmount} SOL and joined the challenge!\n\nTransaction: ${signature.slice(0, 8)}...\n\nNow upload your proof before the deadline!`,
+          `You've staked ${challenge.stakeAmount} SOL!\n\nTx: ${signature.slice(0, 8)}...`,
           [{ text: 'OK' }]
         );
       });
 
     } catch (error: any) {
-      console.error('Failed to join challenge:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('[ERROR]:', error);
       
-      Alert.alert(
-        'Transaction Failed',
-        error?.message || 'Could not complete the transaction. Please try again.',
-        [{ text: 'OK' }]
-      );
+      let msg = 'Transaction failed.';
+      if (error?.code === 'ERROR_AUTHORIZATION_FAILED') {
+        msg = 'You cancelled the transaction.';
+      } else if (error?.message) {
+        msg = error.message;
+      }
+      
+      Alert.alert('Failed', msg, [{ text: 'OK' }]);
     } finally {
       setIsJoining(false);
     }
