@@ -21,7 +21,7 @@ interface Challenge {
   prizePool: number;
 }
 
-export const HomeScreen = () => {
+export const HomeScreen = ({ navigation }: any) => {
   const { publicKey, isConnected, balance, connect, disconnect } = useWallet();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -78,8 +78,16 @@ export const HomeScreen = () => {
     return hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
   };
 
+  const handleChallengePress = (challenge: Challenge) => {
+    navigation.navigate('ChallengeDetail', { challenge });
+  };
+
   const renderChallengeCard = ({ item }: { item: Challenge }) => (
-    <TouchableOpacity style={styles.challengeCard} activeOpacity={0.8}>
+    <TouchableOpacity 
+      style={styles.challengeCard} 
+      activeOpacity={0.8}
+      onPress={() => handleChallengePress(item)}
+    >
       <View style={styles.cardHeader}>
         <Text style={styles.challengeTitle}>{item.title}</Text>
         <View style={styles.stakeBadge}>
@@ -101,9 +109,9 @@ export const HomeScreen = () => {
           <Text style={styles.statValueWarning}>{formatTimeRemaining(item.deadline)}</Text>
         </View>
       </View>
-      <TouchableOpacity style={styles.joinButton}>
-        <Text style={styles.joinButtonText}>Join Challenge →</Text>
-      </TouchableOpacity>
+      <View style={styles.joinButtonPreview}>
+        <Text style={styles.joinButtonPreviewText}>Tap to view & join →</Text>
+      </View>
     </TouchableOpacity>
   );
 
@@ -182,8 +190,8 @@ const styles = StyleSheet.create({
   statLabel: { color: '#666666', fontSize: 11, marginBottom: 4, textTransform: 'uppercase' },
   statValue: { color: '#14F195', fontSize: 16, fontWeight: '600' },
   statValueWarning: { color: '#FF6B6B', fontSize: 16, fontWeight: '600' },
-  joinButton: { backgroundColor: '#9945FF', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
-  joinButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold' },
+  joinButtonPreview: { backgroundColor: '#9945FF', paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  joinButtonPreviewText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
   connectPrompt: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#1A1A1A', padding: 20, borderTopWidth: 1, borderTopColor: '#2A2A2A' },
   connectPromptText: { color: '#FFFFFF', fontSize: 14, marginBottom: 12, textAlign: 'center' },
   connectPromptButton: { backgroundColor: '#14F195', paddingVertical: 14, borderRadius: 12, alignItems: 'center' },

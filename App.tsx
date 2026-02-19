@@ -8,11 +8,15 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { WalletProvider } from './app/contexts/WalletContext';
 import { HomeScreen } from './app/screens/HomeScreen';
 import { ProfileScreen } from './app/screens/ProfileScreen';
+import { ChallengeDetailScreen } from './app/screens/ChallengeDetailScreen';
+import { CameraScreen } from './app/screens/CameraScreen';
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
 
 // Error boundary to catch crashes
 class ErrorBoundary extends React.Component {
@@ -35,6 +39,17 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Home Stack Navigator (includes HomeScreen and ChallengeDetail)
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="HomeMain" component={HomeScreen} />
+      <Stack.Screen name="ChallengeDetail" component={ChallengeDetailScreen} />
+      <Stack.Screen name="Camera" component={CameraScreen} />
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -50,7 +65,7 @@ export default function App() {
           >
             <Tab.Screen 
               name="Home" 
-              component={HomeScreen}
+              component={HomeStack}
               options={{ tabBarLabel: 'Challenges' }}
             />
             <Tab.Screen 
