@@ -42,7 +42,7 @@ const CHALLENGE_VAULT = new PublicKey('WTCyq1nqnpmMaha3MxpQEstauF3t4jeezX6PvvQiv
 
 export const ChallengeDetailScreen = ({ route, navigation }: any) => {
   const { challenge, onJoinSuccess } = route.params as { challenge: Challenge; onJoinSuccess?: (challengeId: string) => void };
-  const { publicKey, isConnected, balance, connect } = useWallet();
+  const { publicKey, isConnected, balance, authToken, connect } = useWallet(); // ✅ Get authToken from context
   
   const [isJoining, setIsJoining] = useState(false);
   const [hasJoined, setHasJoined] = useState(false);
@@ -91,19 +91,33 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
     setIsJoining(true);
 
     try {
-      // ✅ Use publicKey from context directly (already connected)
-      const userPubkey = new PublicKey(publicKey);
-      
-      console.log('[1] Using existing session');
-      console.log('[2] From:', userPubkey.toBase58());
-      console.log('[3] To:', CHALLENGE_VAULT.toBase58());
-      console.log('[4] Amount:', challenge.stakeAmount, 'SOL');
-
       await transact(async (wallet) => {
-        console.log('[5] Getting blockhash...');
+        console.log('[1] Starting transaction...');
+        
+        // ✅ Pass auth_token to reuse session and skip approval dialog
+        const authResult = await wallet.authorize({
+          cluster: 'devnet',
+          identity: {
+            name: 'SolanaSnap',
+            uri: 'https://solanasnap.app',
+            icon: 'favicon.ico',
+          },
+          auth_token: authToken || undefined, // ✅ Reuse stored token
+        });
+
+        console.log('[2] Authorized (reused token:', !!authToken, ')');
+        
+        // Use publicKey from context (already decoded)
+        const userPubkey = new PublicKey(publicKey);
+
+        console.log('[3] From:', userPubkey.toBase58());
+        console.log('[4] To:', CHALLENGE_VAULT.toBase58());
+        console.log('[5] Amount:', challenge.stakeAmount, 'SOL');
+
+        console.log('[6] Getting blockhash...');
         const latestBlockhash = await connection.getLatestBlockhash();
 
-        console.log('[6] Building transaction...');
+        console.log('[7] Building transaction...');
         const transaction = new Transaction();
         transaction.feePayer = userPubkey;
         transaction.recentBlockhash = latestBlockhash.blockhash;
@@ -116,16 +130,15 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           })
         );
 
-        console.log('[7] Sending to wallet...');
+        console.log('[8] Sending to wallet...');
         
-        // ✅ No authorize() call - use existing session
         const result = await wallet.signAndSendTransactions({
           transactions: [transaction],
           minContextSlot: latestBlockhash.lastValidBlockHeight - 150,
         });
 
         const signature = result[0];
-        console.log('[8] ✅ Sent! Sig:', signature);
+        console.log('[9] ✅ Sent! Sig:', signature);
 
         // Confirm
         await connection.confirmTransaction({
@@ -134,11 +147,10 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
         });
 
-        console.log('[9] ✅ Confirmed!');
+        console.log('[10] ✅ Confirmed!');
 
         setHasJoined(true);
         
-        // ✅ Notify parent that user joined this challenge
         if (onJoinSuccess) {
           onJoinSuccess(challenge.id);
         }

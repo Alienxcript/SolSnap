@@ -2,14 +2,19 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { PublicKey, Connection, clusterApiUrl, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+
+// ✅ Key for storing auth token
+const AUTH_TOKEN_KEY = '@solanasnap_auth_token';
 
 interface WalletContextType {
   publicKey: string | null;
   balance: number | null;
   isConnected: boolean;
   isConnecting: boolean;
+  authToken: string | null; // ✅ Expose auth token
   connect: () => Promise<void>;
   disconnect: () => void;
 }
@@ -20,6 +25,23 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [authToken, setAuthToken] = useState<string | null>(null); // ✅ Store auth token
+
+  // ✅ Load auth token on mount
+  useEffect(() => {
+    const loadAuthToken = async () => {
+      try {
+        const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+        if (token) {
+          console.log('✅ Loaded stored auth_token');
+          setAuthToken(token);
+        }
+      } catch (error) {
+        console.error('Error loading auth token:', error);
+      }
+    };
+    loadAuthToken();
+  }, []);
 
   useEffect(() => {
     if (!publicKey) {
@@ -48,6 +70,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       await transact(async (wallet) => {
+        // ✅ Pass stored auth_token to reuse session
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
@@ -55,7 +78,15 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
             uri: 'https://solanasnap.app',
             icon: 'favicon.ico',
           },
+          auth_token: authToken || undefined, // ✅ Reuse if available
         });
+
+        // ✅ Store the new/updated auth_token
+        if (authResult.auth_token) {
+          await AsyncStorage.setItem(AUTH_TOKEN_KEY, authResult.auth_token);
+          setAuthToken(authResult.auth_token);
+          console.log('✅ Stored new auth_token');
+        }
 
         if (!authResult.accounts || authResult.accounts.length === 0) {
           throw new Error('No accounts returned from wallet');
@@ -63,15 +94,13 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
         const account = authResult.accounts[0];
         
-        // ✅ CORRECT METHOD: Use native atob to decode base64 to bytes
-        // MWA returns the public key as a base64-encoded string
+        // ✅ Decode address using atob
         const binaryString = atob(account.address);
         const bytesArray = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytesArray[i] = binaryString.charCodeAt(i);
         }
         
-        // Create PublicKey from the decoded bytes
         const pubKey = new PublicKey(bytesArray);
         const base58Address = pubKey.toBase58();
         
@@ -85,11 +114,19 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsConnecting(false);
     }
-  }, []);
+  }, [authToken]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
     setPublicKey(null);
     setBalance(null);
+    // ✅ Clear auth token on disconnect
+    setAuthToken(null);
+    try {
+      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      console.log('✅ Cleared auth_token');
+    } catch (error) {
+      console.error('Error clearing auth token:', error);
+    }
   }, []);
 
   return (
@@ -99,6 +136,7 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         balance,
         isConnected: publicKey !== null,
         isConnecting,
+        authToken, // ✅ Expose to other components
         connect,
         disconnect,
       }}
