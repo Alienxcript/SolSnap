@@ -9,6 +9,7 @@ import {
   RefreshControl,
   StatusBar,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useWallet, formatPublicKey, formatSOL } from '../contexts/WalletContext';
 
 interface Challenge {
@@ -32,6 +33,13 @@ export const HomeScreen = ({ navigation }: any) => {
   useEffect(() => {
     loadChallenges();
   }, []);
+
+  // ✅ Reload challenges when returning to this screen
+  useFocusEffect(
+    React.useCallback(() => {
+      loadChallenges();
+    }, [joinedChallenges])
+  );
 
   const loadChallenges = async () => {
     const mockChallenges: Challenge[] = [

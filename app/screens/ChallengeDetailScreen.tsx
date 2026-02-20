@@ -72,7 +72,7 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
   };
 
   const handleJoinChallenge = async () => {
-    if (!isConnected) {
+    if (!isConnected || !publicKey) {
       Alert.alert('Wallet Not Connected', 'Please connect your wallet first', [
         { text: 'Connect', onPress: connect },
         { text: 'Cancel', style: 'cancel' },
@@ -91,47 +91,19 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
     setIsJoining(true);
 
     try {
+      // ✅ Use publicKey from context directly (already connected)
+      const userPubkey = new PublicKey(publicKey);
+      
+      console.log('[1] Using existing session');
+      console.log('[2] From:', userPubkey.toBase58());
+      console.log('[3] To:', CHALLENGE_VAULT.toBase58());
+      console.log('[4] Amount:', challenge.stakeAmount, 'SOL');
+
       await transact(async (wallet) => {
-        console.log('[1] Starting transaction (using existing session)...');
-        
-        // ✅ FIX: Only authorize if not already authorized (reauthorize param)
-        const authResult = await wallet.authorize({
-          cluster: 'devnet',
-          identity: {
-            name: 'SolanaSnap',
-            uri: 'https://solanasnap.app',
-            icon: 'favicon.ico',
-          },
-        });
-
-        console.log('[2] Using authorized session');
-
-        // Use publicKey directly if already connected, otherwise decode
-        let userPubkey: PublicKey;
-        
-        if (publicKey) {
-          // Already have publicKey from context
-          userPubkey = new PublicKey(publicKey);
-          console.log('[3] Using cached address');
-        } else {
-          // Decode from auth result
-          const binaryString = atob(authResult.accounts[0].address);
-          const bytesArray = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytesArray[i] = binaryString.charCodeAt(i);
-          }
-          userPubkey = new PublicKey(bytesArray);
-          console.log('[3] Decoded address');
-        }
-
-        console.log('[4] From:', userPubkey.toBase58());
-        console.log('[5] To:', CHALLENGE_VAULT.toBase58());
-        console.log('[6] Amount:', challenge.stakeAmount, 'SOL');
-
-        console.log('[7] Getting blockhash...');
+        console.log('[5] Getting blockhash...');
         const latestBlockhash = await connection.getLatestBlockhash();
 
-        console.log('[8] Building transaction...');
+        console.log('[6] Building transaction...');
         const transaction = new Transaction();
         transaction.feePayer = userPubkey;
         transaction.recentBlockhash = latestBlockhash.blockhash;
@@ -144,16 +116,16 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           })
         );
 
-        console.log('[9] Sending to wallet...');
+        console.log('[7] Sending to wallet...');
         
-        // ✅ Pass transactions with minContextSlot (REQUIRED by MWA)
+        // ✅ No authorize() call - use existing session
         const result = await wallet.signAndSendTransactions({
           transactions: [transaction],
           minContextSlot: latestBlockhash.lastValidBlockHeight - 150,
         });
 
         const signature = result[0];
-        console.log('[10] ✅ Sent! Sig:', signature);
+        console.log('[8] ✅ Sent! Sig:', signature);
 
         // Confirm
         await connection.confirmTransaction({
@@ -162,7 +134,7 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
           lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
         });
 
-        console.log('[11] ✅ Confirmed!');
+        console.log('[9] ✅ Confirmed!');
 
         setHasJoined(true);
         

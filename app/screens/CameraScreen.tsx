@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 
 interface CameraScreenProps {
   route: any;
@@ -78,6 +79,25 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({ route, navigation })
         console.error('Error taking picture:', error);
         Alert.alert('Error', 'Failed to capture photo. Please try again.');
       }
+    }
+  };
+
+  // ✅ NEW: Pick image from gallery
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setCapturedPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to select photo. Please try again.');
     }
   };
 
@@ -179,15 +199,20 @@ export const CameraScreen: React.FC<CameraScreenProps> = ({ route, navigation })
 
         {/* Camera Controls */}
         <View style={styles.controls}>
-          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
-            <Text style={styles.flipButtonText}>🔄</Text>
+          {/* ✅ NEW: Gallery button */}
+          <TouchableOpacity style={styles.galleryButton} onPress={pickImage}>
+            <Text style={styles.galleryButtonText}>🖼️</Text>
+            <Text style={styles.galleryButtonLabel}>Gallery</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
             <View style={styles.captureButtonInner} />
           </TouchableOpacity>
 
-          <View style={styles.placeholder} />
+          <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
+            <Text style={styles.flipButtonText}>🔄</Text>
+            <Text style={styles.flipButtonLabel}>Flip</Text>
+          </TouchableOpacity>
         </View>
       </CameraView>
     </View>
@@ -315,16 +340,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
+  galleryButton: {
+    alignItems: 'center',
+  },
+  galleryButtonText: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  galleryButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   flipButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
     alignItems: 'center',
   },
   flipButtonText: {
-    fontSize: 28,
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  flipButtonLabel: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
   },
   captureButton: {
     width: 80,
