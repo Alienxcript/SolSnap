@@ -206,10 +206,10 @@ MIT License - feel free to use for learning or building!
 
 ## 📞 Contact
 
-**Developer:** Alienxcript  
+**Developer:** Nova  
 **GitHub:** [github.com/Alienxcript](https://github.com/Alienxcript)  
 **Project:** [github.com/Alienxcript/SolanaSnap](https://github.com/Alienxcript/SolanaSnap)
 
 ---
 
-**Built for Solana Mobile Hackathon 2025** 🚀
+**Built for Solana Mobile Hackathon 2026** 🚀
