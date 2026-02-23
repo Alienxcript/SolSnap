@@ -1,25 +1,17 @@
 // app/screens/ChallengeDetailScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  StatusBar,
-  ActivityIndicator,
   Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
-import { useWallet, formatSOL } from '../contexts/WalletContext';
-import { 
-  PublicKey, 
-  Connection,
-  clusterApiUrl,
-  SystemProgram, 
-  LAMPORTS_PER_SOL,
-  Transaction,
-} from '@solana/web3.js';
+import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
+import { useWallet, formatSOL } from '../contexts/WalletContext';
 
 interface Challenge {
   id: string;
@@ -29,47 +21,17 @@ interface Challenge {
   deadline: Date;
   participants: number;
   prizePool: number;
-  imageUrl?: string;
-  longDescription?: string;
-  rules?: string[];
 }
-
-const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
-
-// ✅ FIX: Dedicated Challenge Vault address
-// Replace this with your program's PDA when smart contract is ready
-const CHALLENGE_VAULT = new PublicKey('WTCyq1nqnpmMaha3MxpQEstauF3t4jeezX6PvvQivd8');
 
 export const ChallengeDetailScreen = ({ route, navigation }: any) => {
   const { challenge, onJoinSuccess } = route.params as { challenge: Challenge; onJoinSuccess?: (challengeId: string) => void };
-  const { publicKey, isConnected, balance, authToken, connect } = useWallet(); // ✅ Get authToken from context
-  
-  const [isJoining, setIsJoining] = useState(false);
+  const { publicKey, isConnected, balance, authToken, connect } = useWallet();
   const [hasJoined, setHasJoined] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'SOL' | 'SEEKER'>('SOL');
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeRemaining(formatTimeRemaining(challenge.deadline));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [challenge.deadline]);
-
-  const formatTimeRemaining = (deadline: Date): string => {
-    const now = new Date();
-    const diff = deadline.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'Expired';
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${seconds}s`;
-    }
-    return `${minutes}m ${seconds}s`;
-  };
+  const CHALLENGE_VAULT = new PublicKey('WTCyq1nqnpmMaha3MxpQEstauF3t4jeezX6PvvQivd8');
+  const connection = new (require('@solana/web3.js')).Connection('https://api.devnet.solana.com', 'confirmed');
 
   const handleJoinChallenge = async () => {
     if (!isConnected || !publicKey) {
@@ -80,10 +42,13 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
       return;
     }
 
-    if (balance === null || balance < challenge.stakeAmount) {
+    // Check sufficient balance
+    const requiredAmount = challenge.stakeAmount;
+    
+    if (balance === null || balance < requiredAmount) {
       Alert.alert(
         'Insufficient Balance',
-        `You need ${challenge.stakeAmount} SOL to join this challenge. Current balance: ${formatSOL(balance)}`
+        `You need ${requiredAmount} SOL to join this challenge. Current balance: ${balance?.toFixed(4) || 0} SOL`
       );
       return;
     }
@@ -92,27 +57,25 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
 
     try {
       await transact(async (wallet) => {
-        console.log('[1] Starting transaction...');
+        console.log('[1] Starting SOL transaction...');
         
-        // ✅ Pass auth_token to reuse session and skip approval dialog
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
-            name: 'SolanaSnap',
-            uri: 'https://solanasnap.app',
+            name: 'SolSnap',
+            uri: 'https://solsnap.app',
             icon: 'favicon.ico',
           },
-          auth_token: authToken || undefined, // ✅ Reuse stored token
+          auth_token: authToken || undefined,
         });
 
-        console.log('[2] Authorized (reused token:', !!authToken, ')');
+        console.log('[2] Authorized');
         
-        // Use publicKey from context (already decoded)
         const userPubkey = new PublicKey(publicKey);
-
+        
         console.log('[3] From:', userPubkey.toBase58());
         console.log('[4] To:', CHALLENGE_VAULT.toBase58());
-        console.log('[5] Amount:', challenge.stakeAmount, 'SOL');
+        console.log('[5] Amount:', requiredAmount, 'SOL');
 
         console.log('[6] Getting blockhash...');
         const latestBlockhash = await connection.getLatestBlockhash();
@@ -122,11 +85,12 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
         transaction.feePayer = userPubkey;
         transaction.recentBlockhash = latestBlockhash.blockhash;
         
+        // Always use SOL transfer (SEEKER is UI-only)
         transaction.add(
           SystemProgram.transfer({
             fromPubkey: userPubkey,
             toPubkey: CHALLENGE_VAULT,
-            lamports: Math.floor(challenge.stakeAmount * LAMPORTS_PER_SOL),
+            lamports: Math.floor(requiredAmount * LAMPORTS_PER_SOL),
           })
         );
 
@@ -140,7 +104,6 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
         const signature = result[0];
         console.log('[9] ✅ Sent! Sig:', signature);
 
-        // Confirm
         await connection.confirmTransaction({
           signature,
           blockhash: latestBlockhash.blockhash,
@@ -157,7 +120,7 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
         
         Alert.alert(
           'Success! 🎉',
-          `You've staked ${challenge.stakeAmount} SOL!\n\nTx: ${signature.slice(0, 8)}...`,
+          `You've staked ${requiredAmount} SOL!\n\nTx: ${signature.slice(0, 8)}...`,
           [{ text: 'OK' }]
         );
       });
@@ -178,104 +141,97 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
     }
   };
 
+  const formatTimeRemaining = (deadline: Date): string => {
+    const now = new Date();
+    const diff = deadline.getTime() - now.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      
-      {/* Header */}
+    <ScrollView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Challenge Details</Text>
-        <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Challenge Hero */}
-        <View style={styles.hero}>
-          <Text style={styles.challengeEmoji}>{challenge.title.split(' ')[0]}</Text>
-          <Text style={styles.challengeTitle}>{challenge.title.split(' ').slice(1).join(' ')}</Text>
-          <Text style={styles.challengeDescription}>{challenge.description}</Text>
-        </View>
+      <View style={styles.content}>
+        <Text style={styles.title}>{challenge.title}</Text>
+        <Text style={styles.description}>{challenge.description}</Text>
 
-        {/* Stake Info Card */}
-        <View style={styles.stakeCard}>
-          <View style={styles.stakeRow}>
-            <Text style={styles.stakeLabel}>Stake Required</Text>
-            <Text style={styles.stakeAmount}>{challenge.stakeAmount} SOL</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.stakeRow}>
-            <Text style={styles.stakeLabel}>Prize Pool</Text>
-            <Text style={styles.prizeAmount}>{challenge.prizePool.toFixed(2)} SOL</Text>
-          </View>
-        </View>
-
-        {/* Stats Grid */}
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{challenge.participants}</Text>
-            <Text style={styles.statLabel}>Participants</Text>
+            <Text style={styles.statLabel}>Stake Required</Text>
+            <Text style={styles.statValue}>{challenge.stakeAmount} SOL</Text>
           </View>
           <View style={styles.statBox}>
-            <Text style={styles.statValue}>{timeRemaining}</Text>
+            <Text style={styles.statLabel}>Participants</Text>
+            <Text style={styles.statValue}>{challenge.participants}</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>Prize Pool</Text>
+            <Text style={styles.statValue}>{challenge.prizePool.toFixed(2)} SOL</Text>
+          </View>
+          <View style={styles.statBox}>
             <Text style={styles.statLabel}>Time Left</Text>
+            <Text style={styles.statValueWarning}>{formatTimeRemaining(challenge.deadline)}</Text>
           </View>
         </View>
 
-        {/* Long Description */}
-        {challenge.longDescription && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>About This Challenge</Text>
-            <Text style={styles.sectionText}>{challenge.longDescription}</Text>
-          </View>
-        )}
+        {/* Payment Method Selector - SEEKER disabled with "Coming Soon" */}
+        <View style={styles.paymentSelector}>
+          <Text style={styles.sectionTitle}>Select Payment Method</Text>
+          <View style={styles.paymentOptions}>
+            <TouchableOpacity
+              style={[styles.paymentOption, paymentMethod === 'SOL' && styles.paymentOptionActive]}
+              onPress={() => setPaymentMethod('SOL')}
+            >
+              <Text style={[styles.paymentOptionText, paymentMethod === 'SOL' && styles.paymentOptionTextActive]}>
+                SOL
+              </Text>
+              {balance !== null && (
+                <Text style={styles.balanceText}>{balance.toFixed(4)} available</Text>
+              )}
+            </TouchableOpacity>
 
-        {/* Rules */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Rules</Text>
-          {(challenge.rules || [
-            'Complete the challenge before the deadline',
-            'Upload clear photo proof',
-            'Must be original content (no reposting)',
-            'Complete to get your stake back + share of forfeits',
-          ]).map((rule, index) => (
-            <View key={index} style={styles.ruleItem}>
-              <Text style={styles.ruleBullet}>•</Text>
-              <Text style={styles.ruleText}>{rule}</Text>
-            </View>
-          ))}
+            <TouchableOpacity
+              style={[styles.paymentOption, styles.paymentOptionDisabled]}
+              disabled={true}
+            >
+              <View style={styles.comingSoonBadge}>
+                <Text style={styles.comingSoonText}>COMING SOON</Text>
+              </View>
+              <Text style={[styles.paymentOptionText, styles.paymentOptionTextDisabled]}>
+                SEEKER
+              </Text>
+              <Text style={styles.balanceTextDisabled}>Multi-token support</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Wallet Info */}
-        {isConnected && (
-          <View style={styles.walletInfo}>
-            <Text style={styles.walletLabel}>Your Balance</Text>
-            <Text style={styles.walletBalance}>{formatSOL(balance)}</Text>
+        <View style={styles.rulesBox}>
+          <Text style={styles.rulesTitle}>📋 Challenge Rules</Text>
+          <Text style={styles.rulesText}>• Submit proof photo within the deadline</Text>
+          <Text style={styles.rulesText}>• Photo will be verified by community</Text>
+          <Text style={styles.rulesText}>• Winners split the prize pool equally</Text>
+          <Text style={styles.rulesText}>• Failed submissions forfeit stake</Text>
+        </View>
+
+        {hasJoined ? (
+          <View style={styles.joinedContainer}>
+            <Text style={styles.joinedText}>✓ You've Joined This Challenge!</Text>
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={() => navigation.navigate('Camera', {
+                challengeId: challenge.id,
+                challengeTitle: challenge.title,
+              })}
+            >
+              <Text style={styles.uploadButtonText}>📸 Upload Proof</Text>
+            </TouchableOpacity>
           </View>
-        )}
-
-        {/* Spacer for button */}
-        <View style={{ height: 120 }} />
-      </ScrollView>
-
-      {/* Join Button (Fixed at bottom) */}
-      <View style={styles.footer}>
-        {!isConnected ? (
-          <TouchableOpacity style={styles.connectButton} onPress={connect}>
-            <Text style={styles.connectButtonText}>Connect Wallet to Join</Text>
-          </TouchableOpacity>
-        ) : hasJoined ? (
-          <TouchableOpacity 
-            style={styles.uploadButton}
-            onPress={() => navigation.navigate('Camera', { 
-              challengeId: challenge.id,
-              challengeTitle: challenge.title 
-            })}
-          >
-            <Text style={styles.uploadButtonText}>📸 Upload Proof</Text>
-          </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={[styles.joinButton, isJoining && styles.joinButtonDisabled]}
@@ -286,224 +242,216 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
               <ActivityIndicator color="#000000" />
             ) : (
               <Text style={styles.joinButtonText}>
-                Stake {challenge.stakeAmount} SOL & Join Challenge
+                Stake {challenge.stakeAmount} SOL & Join
               </Text>
             )}
           </TouchableOpacity>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#0A0A0A',
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
     paddingTop: 60,
+    paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#141414',
     borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
+    borderBottomColor: '#1F1F1F',
   },
   backButton: {
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   backText: {
     color: '#14F195',
     fontSize: 16,
     fontWeight: '600',
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  placeholder: {
-    width: 50,
-  },
   content: {
-    flex: 1,
+    padding: 20,
   },
-  hero: {
-    padding: 32,
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2A2A2A',
-  },
-  challengeEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  challengeTitle: {
+  title: {
     fontSize: 28,
     fontWeight: 'bold',
     color: '#FFFFFF',
-    textAlign: 'center',
     marginBottom: 12,
+    letterSpacing: -0.5,
   },
-  challengeDescription: {
+  description: {
     fontSize: 16,
     color: '#AAAAAA',
-    textAlign: 'center',
     lineHeight: 24,
-  },
-  stakeCard: {
-    margin: 20,
-    padding: 24,
-    backgroundColor: '#1A1A1A',
-    borderRadius: 16,
-    borderWidth: 2,
-    borderColor: '#14F195',
-  },
-  stakeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stakeLabel: {
-    fontSize: 14,
-    color: '#888888',
-    textTransform: 'uppercase',
-  },
-  stakeAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#14F195',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#2A2A2A',
-    marginVertical: 16,
-  },
-  prizeAmount: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFD700',
+    marginBottom: 24,
   },
   statsGrid: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    gap: 16,
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
   },
   statBox: {
-    flex: 1,
-    backgroundColor: '#1A1A1A',
-    padding: 20,
+    backgroundColor: '#141414',
+    padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    flex: 1,
+    minWidth: '45%',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#14F195',
-    marginBottom: 8,
+    borderColor: '#1F1F1F',
   },
   statLabel: {
+    color: '#666666',
     fontSize: 12,
-    color: '#888888',
+    marginBottom: 8,
     textTransform: 'uppercase',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  section: {
-    padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 16,
-  },
-  sectionText: {
-    fontSize: 16,
-    color: '#AAAAAA',
-    lineHeight: 24,
-  },
-  ruleItem: {
-    flexDirection: 'row',
-    marginBottom: 12,
-  },
-  ruleBullet: {
+  statValue: {
     color: '#14F195',
-    fontSize: 20,
-    marginRight: 12,
-    marginTop: -4,
-  },
-  ruleText: {
-    flex: 1,
-    fontSize: 15,
-    color: '#CCCCCC',
-    lineHeight: 22,
-  },
-  walletInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginHorizontal: 20,
-    padding: 16,
-    backgroundColor: '#2A2A2A',
-    borderRadius: 12,
-  },
-  walletLabel: {
-    fontSize: 14,
-    color: '#888888',
-  },
-  walletBalance: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#14F195',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: '#000000',
-    borderTopWidth: 1,
-    borderTopColor: '#2A2A2A',
-  },
-  connectButton: {
-    backgroundColor: '#14F195',
-    paddingVertical: 18,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  connectButtonText: {
-    color: '#000000',
-    fontSize: 16,
+  statValueWarning: {
+    color: '#FF6B6B',
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  joinButton: {
-    backgroundColor: '#9945FF',
-    paddingVertical: 18,
+  paymentSelector: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 12,
+  },
+  paymentOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  paymentOption: {
+    flex: 1,
+    backgroundColor: '#141414',
+    padding: 16,
     borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#1F1F1F',
     alignItems: 'center',
+  },
+  paymentOptionActive: {
+    borderColor: '#14F195',
+    backgroundColor: 'rgba(20, 241, 149, 0.1)',
+  },
+  paymentOptionDisabled: {
+    opacity: 0.6,
+    borderColor: '#1F1F1F',
+    borderStyle: 'dashed',
+  },
+  paymentOptionText: {
+    color: '#AAAAAA',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  paymentOptionTextActive: {
+    color: '#14F195',
+  },
+  paymentOptionTextDisabled: {
+    color: '#666666',
+  },
+  balanceText: {
+    color: '#666666',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  balanceTextDisabled: {
+    color: '#444444',
+    fontSize: 10,
+    marginTop: 4,
+  },
+  comingSoonBadge: {
+    backgroundColor: '#9945FF',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginBottom: 6,
+  },
+  comingSoonText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  rulesBox: {
+    backgroundColor: '#141414',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    borderLeftWidth: 4,
+    borderLeftColor: '#9945FF',
+  },
+  rulesTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  rulesText: {
+    color: '#AAAAAA',
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 6,
+  },
+  joinButton: {
+    backgroundColor: '#14F195',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: '#14F195',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   joinButtonDisabled: {
     opacity: 0.6,
   },
   joinButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: '#000000',
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  uploadButton: {
-    backgroundColor: '#14F195',
-    paddingVertical: 18,
-    borderRadius: 12,
+  joinedContainer: {
     alignItems: 'center',
   },
+  joinedText: {
+    color: '#14F195',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  uploadButton: {
+    backgroundColor: '#9945FF',
+    paddingVertical: 18,
+    paddingHorizontal: 40,
+    borderRadius: 16,
+    shadowColor: '#9945FF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
   uploadButtonText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: 'bold',
   },
