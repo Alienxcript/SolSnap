@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SolanaSnap",
-    "slug": "solanasnap",
+    "name": "SolSnap",
+    "slug": "solsnap",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,7 +16,7 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "package": "com.solanasnap.app",
+      "package": "com.solsnap.app",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",

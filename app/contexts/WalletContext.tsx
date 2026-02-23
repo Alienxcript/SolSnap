@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
 // ✅ Key for storing auth token
-const AUTH_TOKEN_KEY = '@solanasnap_auth_token';
+const AUTH_TOKEN_KEY = '@solsnap_auth_token';
 
 interface WalletContextType {
   publicKey: string | null;
@@ -74,8 +74,8 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
-            name: 'SolanaSnap',
-            uri: 'https://solanasnap.app',
+            name: 'SolSnap',
+            uri: 'https://solsnap.app',
             icon: 'favicon.ico',
           },
           auth_token: authToken || undefined, // ✅ Reuse if available

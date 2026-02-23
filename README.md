@@ -1,8 +1,8 @@
-# 📸 SolanaSnap
+# 📸 SolSnap
 
 > Daily photo challenges with crypto stakes on Solana
 
-**SolanaSnap** is a mobile-first social accountability app where users stake SOL on daily challenges, submit photo proof, and earn rewards for completion. Built for the Solana Mobile hackathon.
+**SolSnap** is a mobile-first social accountability app where users stake SOL on daily challenges, submit photo proof, and earn rewards for completion. Built for the Solana Mobile hackathon.
 
 [![Made with Expo](https://img.shields.io/badge/Made%20with-Expo-000020.svg?style=flat&logo=expo)](https://expo.dev)
 [![Solana](https://img.shields.io/badge/Solana-Devnet-14F195?style=flat&logo=solana)](https://solana.com)
@@ -45,8 +45,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/Alienxcript/SolanaSnap.git
-cd SolanaSnap
+git clone https://github.com/Alienxcript/SolSnap.git
+cd SolSnap
 
 # Install dependencies
 npm install
@@ -78,7 +78,7 @@ eas build --platform android --profile preview
 ## 📂 Project Structure
 
 ```
-SolanaSnap/
+SolSnap/
 ├── app/
 │   ├── contexts/
 │   │   └── WalletContext.tsx      # Wallet connection & auth token management
@@ -208,7 +208,7 @@ MIT License - feel free to use for learning or building!
 
 **Developer:** Nova  
 **GitHub:** [github.com/Alienxcript](https://github.com/Alienxcript)  
-**Project:** [github.com/Alienxcript/SolanaSnap](https://github.com/Alienxcript/SolanaSnap)
+**Project:** [github.com/Alienxcript/SolSnap](https://github.com/Alienxcript/SolSnap)
 
 ---
 

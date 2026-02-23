@@ -166,7 +166,7 @@ export const HomeScreen = ({ navigation }: any) => {
       <StatusBar barStyle="light-content" />
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>SolanaSnap</Text>
+          <Text style={styles.headerTitle}>SolSnap</Text>
           <Text style={styles.headerSubtitle}>Daily Challenges</Text>
         </View>
         
