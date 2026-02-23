@@ -27,12 +27,6 @@
     "plugins": [
       "expo-camera",
       "expo-image-picker"
-    ],
-    "extra": {
-      "eas": {
-        "projectId": "0b5e3a3b-e4da-4a3f-b23b-d7535cb6c60a"
-      }
-    },
-    "owner": "DeMarvel"
+    ]
   }
 }
