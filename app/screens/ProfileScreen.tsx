@@ -14,9 +14,21 @@ interface JoinedChallenge {
   proofSubmitted: boolean;
 }
 
+interface CreatedChallenge {
+  id: string;
+  title: string;
+  stakeAmount: number;
+  prizePool: number;
+  participants: number;
+  maxParticipants: number;
+  deadline: Date;
+  status: 'active' | 'ended';
+}
+
 export const ProfileScreen = ({ navigation }: any) => {
   const { publicKey, isConnected, balance, connect, disconnect } = useWallet();
   const [joinedChallenges, setJoinedChallenges] = useState<JoinedChallenge[]>([]);
+  const [createdChallenges, setCreatedChallenges] = useState<CreatedChallenge[]>([]);
 
   // Load joined challenges
   const loadJoinedChallenges = () => {
@@ -42,9 +54,18 @@ export const ProfileScreen = ({ navigation }: any) => {
     setJoinedChallenges(mockJoined);
   };
 
+  // Load created challenges
+  const loadCreatedChallenges = () => {
+    // Mock empty data - user hasn't created any yet
+    // In production, fetch from backend/blockchain
+    const mockCreated: CreatedChallenge[] = [];
+    setCreatedChallenges(mockCreated);
+  };
+
   useEffect(() => {
     if (isConnected) {
       loadJoinedChallenges();
+      loadCreatedChallenges();
     }
   }, [isConnected]);
 
@@ -53,6 +74,7 @@ export const ProfileScreen = ({ navigation }: any) => {
     React.useCallback(() => {
       if (isConnected) {
         loadJoinedChallenges();
+        loadCreatedChallenges();
       }
     }, [isConnected])
   );
@@ -214,6 +236,90 @@ export const ProfileScreen = ({ navigation }: any) => {
                     onPress={() => navigation.navigate('Home')}
                   >
                     <Text style={styles.browseChallengesText}>Browse Challenges</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Created Challenges Section */}
+            <View style={styles.joinedSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Created Challenges</Text>
+                <TouchableOpacity 
+                  style={styles.newChallengeButton}
+                  onPress={() => navigation.navigate('Create')}
+                >
+                  <LinearGradient
+                    colors={['#9945FF', '#7928CA']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.newChallengeGradient}
+                  >
+                    <Text style={styles.newChallengeText}>+ New</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+
+              {createdChallenges.length > 0 ? (
+                createdChallenges.map((challenge) => (
+                  <TouchableOpacity
+                    key={challenge.id}
+                    style={styles.challengeCard}
+                    onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.challengeHeader}>
+                      <Text style={styles.challengeTitle}>{challenge.title}</Text>
+                      <LinearGradient
+                        colors={['#14F195', '#0EA97F']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.stakeBadge}
+                      >
+                        <Text style={styles.stakeText}>{challenge.stakeAmount} SOL</Text>
+                      </LinearGradient>
+                    </View>
+
+                    <View style={styles.challengeInfo}>
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Participants</Text>
+                        <Text style={styles.infoValue}>
+                          {challenge.participants}/{challenge.maxParticipants}
+                        </Text>
+                      </View>
+                      <View style={styles.infoItem}>
+                        <Text style={styles.infoLabel}>Prize Pool</Text>
+                        <Text style={styles.infoValue}>◎ {challenge.prizePool}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyChallenges}>
+                  <View style={styles.emptyIconContainer}>
+                    <LinearGradient
+                      colors={['#9945FF', '#7928CA']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.emptyIconGradient}
+                    >
+                      <Text style={styles.emptyIconText}>+</Text>
+                    </LinearGradient>
+                  </View>
+                  <Text style={styles.emptyTitle}>No challenges created yet</Text>
+                  <Text style={styles.emptyText}>Be the first to launch a challenge!</Text>
+                  <TouchableOpacity 
+                    style={styles.createChallengeButton}
+                    onPress={() => navigation.navigate('Create')}
+                  >
+                    <LinearGradient
+                      colors={['#9945FF', '#7928CA']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.createChallengeGradient}
+                    >
+                      <Text style={styles.createChallengeText}>Create Challenge</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               )}
@@ -492,5 +598,48 @@ const styles = StyleSheet.create({
     color: '#000000', 
     fontSize: 16, 
     fontWeight: 'bold' 
+  },
+  newChallengeButton: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  newChallengeGradient: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  newChallengeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  emptyIconContainer: {
+    marginBottom: 16,
+  },
+  emptyIconGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyIconText: {
+    fontSize: 36,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  createChallengeButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  createChallengeGradient: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  createChallengeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 });

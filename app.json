@@ -27,6 +27,11 @@
     "plugins": [
       "expo-camera",
       "expo-image-picker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "91b20498-028d-4baa-93cd-0b15664a440f"
+      }
+    }
   }
 }
