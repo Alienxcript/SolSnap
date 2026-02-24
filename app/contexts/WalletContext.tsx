@@ -6,17 +6,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 
-// ✅ Key for storing auth token
 const AUTH_TOKEN_KEY = '@solsnap_auth_token';
+const JOINED_CHALLENGES_KEY = '@solsnap_joined_challenges';
 
 interface WalletContextType {
   publicKey: string | null;
   balance: number | null;
   isConnected: boolean;
   isConnecting: boolean;
-  authToken: string | null; // ✅ Expose auth token
+  authToken: string | null;
+  joinedChallenges: Set<string>;
   connect: () => Promise<void>;
   disconnect: () => void;
+  addJoinedChallenge: (challengeId: string) => void;
+  removeJoinedChallenge: (challengeId: string) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -25,22 +28,29 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const [publicKey, setPublicKey] = useState<string | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [authToken, setAuthToken] = useState<string | null>(null); // ✅ Store auth token
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [joinedChallenges, setJoinedChallenges] = useState<Set<string>>(new Set());
 
-  // ✅ Load auth token on mount
+  // Load auth token and joined challenges on mount
   useEffect(() => {
-    const loadAuthToken = async () => {
+    const loadData = async () => {
       try {
         const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
         if (token) {
           console.log('✅ Loaded stored auth_token');
           setAuthToken(token);
         }
+
+        const joined = await AsyncStorage.getItem(JOINED_CHALLENGES_KEY);
+        if (joined) {
+          setJoinedChallenges(new Set(JSON.parse(joined)));
+          console.log('✅ Loaded joined challenges');
+        }
       } catch (error) {
-        console.error('Error loading auth token:', error);
+        console.error('Error loading data:', error);
       }
     };
-    loadAuthToken();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -70,7 +80,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       await transact(async (wallet) => {
-        // ✅ Pass stored auth_token to reuse session
         const authResult = await wallet.authorize({
           cluster: 'devnet',
           identity: {
@@ -78,10 +87,9 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
             uri: 'https://solsnap.app',
             icon: 'favicon.ico',
           },
-          auth_token: authToken || undefined, // ✅ Reuse if available
+          auth_token: authToken || undefined,
         });
 
-        // ✅ Store the new/updated auth_token
         if (authResult.auth_token) {
           await AsyncStorage.setItem(AUTH_TOKEN_KEY, authResult.auth_token);
           setAuthToken(authResult.auth_token);
@@ -94,7 +102,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
 
         const account = authResult.accounts[0];
         
-        // ✅ Decode address using atob
         const binaryString = atob(account.address);
         const bytesArray = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -119,7 +126,6 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
   const disconnect = useCallback(async () => {
     setPublicKey(null);
     setBalance(null);
-    // ✅ Clear auth token on disconnect
     setAuthToken(null);
     try {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
@@ -129,6 +135,24 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  const addJoinedChallenge = useCallback(async (challengeId: string) => {
+    setJoinedChallenges(prev => {
+      const newSet = new Set(prev);
+      newSet.add(challengeId);
+      AsyncStorage.setItem(JOINED_CHALLENGES_KEY, JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  }, []);
+
+  const removeJoinedChallenge = useCallback(async (challengeId: string) => {
+    setJoinedChallenges(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(challengeId);
+      AsyncStorage.setItem(JOINED_CHALLENGES_KEY, JSON.stringify(Array.from(newSet)));
+      return newSet;
+    });
+  }, []);
+
   return (
     <WalletContext.Provider
       value={{
@@ -136,9 +160,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         balance,
         isConnected: publicKey !== null,
         isConnecting,
-        authToken, // ✅ Expose to other components
+        authToken,
+        joinedChallenges,
         connect,
         disconnect,
+        addJoinedChallenge,
+        removeJoinedChallenge,
       }}
     >
       {children}

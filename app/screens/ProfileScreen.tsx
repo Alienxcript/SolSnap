@@ -28,43 +28,60 @@ interface CreatedChallenge {
 }
 
 export const ProfileScreen = ({ navigation }: any) => {
-  const { publicKey, isConnected, balance, connect, disconnect } = useWallet();
-  const [joinedChallenges, setJoinedChallenges] = useState<JoinedChallenge[]>([]);
+  const { publicKey, isConnected, balance, connect, disconnect, joinedChallenges } = useWallet();
   const [createdChallenges, setCreatedChallenges] = useState<CreatedChallenge[]>([]);
 
-  // Load joined challenges
-  const loadJoinedChallenges = () => {
-    const mockJoined: JoinedChallenge[] = [
-      {
-        id: '1',
-        emoji: '🌅',
-        title: 'Sunrise Snap',
-        stakeAmount: 0.1,
-        deadline: new Date(Date.now() + 8 * 3600 * 1000),
-        status: 'active',
-        proofSubmitted: false,
-      },
-      {
-        id: '2',
-        emoji: '🥗',
-        title: 'Healthy Meal',
-        stakeAmount: 0.05,
-        deadline: new Date(Date.now() + 12 * 3600 * 1000),
-        status: 'active',
-        proofSubmitted: false,
-      },
-      {
-        id: '3',
-        emoji: '🧘',
-        title: 'Meditation Moment',
-        stakeAmount: 0.05,
-        deadline: new Date(Date.now() + 20 * 3600 * 1000),
-        status: 'active',
-        proofSubmitted: false,
-      },
-    ];
-    setJoinedChallenges(mockJoined);
-  };
+  // All available challenges (should match HomeScreen)
+  const allChallenges: JoinedChallenge[] = [
+    {
+      id: '1',
+      emoji: '🌅',
+      title: 'Sunrise Snap',
+      stakeAmount: 0.1,
+      deadline: new Date(Date.now() + 8 * 3600 * 1000),
+      status: 'active',
+      proofSubmitted: false,
+    },
+    {
+      id: '2',
+      emoji: '🥗',
+      title: 'Healthy Meal',
+      stakeAmount: 0.05,
+      deadline: new Date(Date.now() + 12 * 3600 * 1000),
+      status: 'active',
+      proofSubmitted: false,
+    },
+    {
+      id: '3',
+      emoji: '💪',
+      title: 'Morning Workout',
+      stakeAmount: 0.15,
+      deadline: new Date(Date.now() + 10 * 3600 * 1000),
+      status: 'active',
+      proofSubmitted: false,
+    },
+    {
+      id: '4',
+      emoji: '📚',
+      title: 'Reading Hour',
+      stakeAmount: 0.08,
+      deadline: new Date(Date.now() + 16 * 3600 * 1000),
+      status: 'active',
+      proofSubmitted: false,
+    },
+    {
+      id: '5',
+      emoji: '🧘',
+      title: 'Meditation Moment',
+      stakeAmount: 0.05,
+      deadline: new Date(Date.now() + 20 * 3600 * 1000),
+      status: 'active',
+      proofSubmitted: false,
+    },
+  ];
+
+  // Filter to only show joined challenges
+  const userJoinedChallenges = allChallenges.filter(c => joinedChallenges.has(c.id));
 
   const loadCreatedChallenges = () => {
     const mockCreated: CreatedChallenge[] = [];
@@ -73,7 +90,6 @@ export const ProfileScreen = ({ navigation }: any) => {
 
   useEffect(() => {
     if (isConnected) {
-      loadJoinedChallenges();
       loadCreatedChallenges();
     }
   }, [isConnected]);
@@ -81,10 +97,9 @@ export const ProfileScreen = ({ navigation }: any) => {
   useFocusEffect(
     React.useCallback(() => {
       if (isConnected) {
-        loadJoinedChallenges();
         loadCreatedChallenges();
       }
-    }, [isConnected])
+    }, [isConnected, joinedChallenges])
   );
 
   const formatTimeRemaining = (deadline: Date): string => {
@@ -175,11 +190,12 @@ export const ProfileScreen = ({ navigation }: any) => {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>JOINED CHALLENGES</Text>
                 <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{joinedChallenges.length}</Text>
+                  <Text style={styles.countBadgeText}>{userJoinedChallenges.length}</Text>
                 </View>
               </View>
 
-              {joinedChallenges.map((challenge) => (
+              {userJoinedChallenges.length > 0 ? (
+                userJoinedChallenges.map((challenge) => (
                 <View key={challenge.id} style={styles.challengeCard}>
                   <View style={styles.challengeHeader}>
                     <Text style={styles.challengeTitle}>{challenge.emoji} {challenge.title}</Text>
@@ -216,7 +232,14 @@ export const ProfileScreen = ({ navigation }: any) => {
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
-              ))}
+              ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyIconText}>🎯</Text>
+                  <Text style={styles.emptyTitle}>No challenges joined yet</Text>
+                  <Text style={styles.emptyDescription}>Join a challenge from the Home tab!</Text>
+                </View>
+              )}
             </View>
 
             {/* Created Challenges */}
@@ -392,8 +415,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statBox: {
-    flex: 1,
-    minWidth: '47%',
+    width: '47%', // Force 2 columns
     borderRadius: 16,
     padding: 16,
     gap: 8,

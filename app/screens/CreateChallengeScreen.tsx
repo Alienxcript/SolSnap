@@ -78,6 +78,14 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
       
       // Redirect after 2 seconds
       setTimeout(() => {
+        setShowSuccess(false); // Reset state before navigating
+        setCoverImage(null);
+        setTitle('');
+        setDescription('');
+        setDuration('24h');
+        setStakeAmount('0.05');
+        setprizePool('0.5');
+        setMaxParticipants('50');
         navigation.navigate('Home');
       }, 2000);
     }, 1500);

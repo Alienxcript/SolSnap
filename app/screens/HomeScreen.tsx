@@ -8,10 +8,12 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
-import { RefreshCw, Users, Trophy, Clock } from 'lucide-react-native';
+import { RefreshCw, Users, Trophy, Clock, Info, X } from 'lucide-react-native';
 import { useWallet } from '../contexts/WalletContext';
 
 interface Challenge {
@@ -27,10 +29,11 @@ interface Challenge {
 }
 
 export const HomeScreen = ({ navigation }: any) => {
-  const { publicKey, isConnected, balance, connect } = useWallet();
+  const { publicKey, isConnected, balance, connect, joinedChallenges, addJoinedChallenge } = useWallet();
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [joinedChallenges, setJoinedChallenges] = useState<Set<string>>(new Set());
+  const [showStakeInfo, setShowStakeInfo] = useState(false);
+  const [selectedStakeAmount, setSelectedStakeAmount] = useState(0);
 
   useEffect(() => {
     loadChallenges();
@@ -121,10 +124,15 @@ export const HomeScreen = ({ navigation }: any) => {
     navigation.navigate('ChallengeDetail', { 
       challenge,
       onJoinSuccess: (challengeId: string) => {
-        setJoinedChallenges(prev => new Set(prev).add(challengeId));
+        addJoinedChallenge(challengeId);
         loadChallenges();
       }
     });
+  };
+
+  const handleStakeBadgePress = (amount: number) => {
+    setSelectedStakeAmount(amount);
+    setShowStakeInfo(true);
   };
 
   const renderChallengeCard = ({ item }: { item: Challenge }) => (
@@ -135,14 +143,20 @@ export const HomeScreen = ({ navigation }: any) => {
     >
       <View style={styles.cardHeader}>
         <Text style={styles.challengeTitle}>{item.emoji} {item.title}</Text>
-        <LinearGradient
-          colors={['#14F195', '#0EA97F']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.stakeBadge}
+        <TouchableOpacity 
+          onPress={() => handleStakeBadgePress(item.stakeAmount)}
+          activeOpacity={0.7}
         >
-          <Text style={styles.stakeText}>◎ {item.stakeAmount} SOL</Text>
-        </LinearGradient>
+          <LinearGradient
+            colors={['#14F195', '#0EA97F']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.stakeBadge}
+          >
+            <Text style={styles.stakeText}>◎ {item.stakeAmount} SOL</Text>
+            <Info size={12} color="#000000" />
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
       
       <Text style={styles.challengeDescription}>{item.description}</Text>
@@ -238,6 +252,36 @@ export const HomeScreen = ({ navigation }: any) => {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#14F195" />}
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Stake Info Modal */}
+      <Modal
+        visible={showStakeInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowStakeInfo(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowStakeInfo(false)}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={styles.modalClose}
+              onPress={() => setShowStakeInfo(false)}
+            >
+              <X size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.modalIcon}>
+              <Info size={24} color="#14F195" />
+            </View>
+            
+            <Text style={styles.modalTitle}>Minimum Stake Required</Text>
+            <Text style={styles.modalAmount}>◎ {selectedStakeAmount} SOL</Text>
+            <Text style={styles.modalDescription}>
+              This is the minimum SOL amount required to participate in the challenge. 
+              Your stake will be returned plus rewards if you complete the challenge successfully.
+            </Text>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -361,12 +405,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stakeBadge: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 10, 
     paddingVertical: 5, 
     borderRadius: 8,
   },
   stakeText: { 
-    color: '#FFFFFF', 
+    color: '#000000', 
     fontSize: 11, 
     fontWeight: 'bold' 
   },
@@ -404,5 +451,61 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', 
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#141414',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  modalClose: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#1F1F1F',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(20, 241, 149, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalAmount: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#14F195',
+    marginBottom: 16,
+  },
+  modalDescription: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    lineHeight: 20,
+    textAlign: 'center',
   },
 });
