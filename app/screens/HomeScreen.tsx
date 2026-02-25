@@ -274,7 +274,7 @@ export const HomeScreen = ({ navigation }: any) => {
             <Text style={styles.modalAmount}>◎ {selectedStakeAmount} SOL</Text>
             <Text style={styles.modalDescription}>
               This is the minimum SOL amount required to participate in the challenge. 
-              Your stake will be returned plus rewards if you complete the challenge successfully.
+              Selected winners are refunded back their stake plus rewards.
             </Text>
           </View>
         </Pressable>

@@ -99,15 +99,14 @@ export const ProfileScreen = ({ navigation }: any) => {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header - Only show when connected */}
-      {isConnected && (
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-        </View>
-      )}
+      {isConnected ? (
+        <>
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Profile</Text>
+          </View>
 
-      <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {isConnected ? (
+          <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <>
             {/* Wallet Card */}
             <View style={styles.walletCard}>
@@ -334,34 +333,39 @@ export const ProfileScreen = ({ navigation }: any) => {
             </View>
           </>
         ) : (
-          <View style={styles.notConnectedFullscreen}>
-            <LinearGradient
-              colors={['#9945FF', '#14F195']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.walletIconContainer}
-            >
-              <Wallet size={28} color="#FFFFFF" />
-            </LinearGradient>
-            
-            <Text style={styles.notConnectedTitle}>Connect Your Wallet</Text>
-            <Text style={styles.notConnectedDescription}>
-              Connect your Solana wallet to view your profile, track challenges, and manage your stats.
-            </Text>
-            
-            <TouchableOpacity style={styles.connectButton} onPress={connect}>
-              <LinearGradient
-                colors={['#9945FF', '#7928CA']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.connectButtonGradient}
-              >
-                <Text style={styles.connectButtonText}>Connect Wallet</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
+          null
         )}
       </ScrollView>
+    </>
+      ) : (
+        // Not Connected - Outside ScrollView for proper centering
+        <View style={styles.notConnectedFullscreen}>
+          <LinearGradient
+            colors={['#9945FF', '#14F195']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.walletIconContainer}
+          >
+            <Wallet size={28} color="#FFFFFF" />
+          </LinearGradient>
+          
+          <Text style={styles.notConnectedTitle}>Connect Your Wallet</Text>
+          <Text style={styles.notConnectedDescription}>
+            Connect your Solana wallet to view your profile, track challenges, and manage your stats.
+          </Text>
+          
+          <TouchableOpacity style={styles.connectButton} onPress={connect}>
+            <LinearGradient
+              colors={['#9945FF', '#7928CA']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.connectButtonGradient}
+            >
+              <Text style={styles.connectButtonText}>Connect Wallet</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };

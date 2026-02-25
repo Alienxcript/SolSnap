@@ -114,7 +114,15 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
           },
         });
 
-        const userPubkey = new PublicKey(authResult.accounts[0].address);
+        // Decode base64 address properly (same as join challenge)
+        const account = authResult.accounts[0];
+        const binaryString = atob(account.address);
+        const bytesArray = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytesArray[i] = binaryString.charCodeAt(i);
+        }
+        const userPubkey = new PublicKey(bytesArray);
+
         const latestBlockhash = await connection.getLatestBlockhash();
 
         const transaction = new Transaction();
@@ -135,8 +143,10 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
           minContextSlot: latestBlockhash.lastValidBlockHeight - 150,
         });
 
+        const signature = result[0];
+
         await connection.confirmTransaction({
-          signature: result[0],
+          signature,
           blockhash: latestBlockhash.blockhash,
           lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
         });
