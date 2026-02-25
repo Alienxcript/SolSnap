@@ -9,6 +9,7 @@ const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
 const AUTH_TOKEN_KEY = '@solsnap_auth_token';
 const JOINED_CHALLENGES_KEY = '@solsnap_joined_challenges';
 const CREATED_CHALLENGES_KEY = '@solsnap_created_challenges';
+const PUBLIC_KEY_KEY = '@solsnap_public_key';
 
 interface CreatedChallenge {
   id: string;
@@ -56,6 +57,12 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         if (token) {
           console.log('✅ Loaded stored auth_token');
           setAuthToken(token);
+        }
+
+        const storedPublicKey = await AsyncStorage.getItem(PUBLIC_KEY_KEY);
+        if (storedPublicKey) {
+          console.log('✅ Loaded stored publicKey');
+          setPublicKey(storedPublicKey);
         }
 
         const joined = await AsyncStorage.getItem(JOINED_CHALLENGES_KEY);
@@ -142,6 +149,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
         
         console.log('✅ Wallet connected:', base58Address);
         setPublicKey(base58Address);
+        
+        // Save publicKey to storage
+        await AsyncStorage.setItem(PUBLIC_KEY_KEY, base58Address);
+        console.log('✅ Stored publicKey');
       });
       
     } catch (error) {
@@ -158,9 +169,10 @@ export const WalletProvider = ({ children }: { children: ReactNode }) => {
     setAuthToken(null);
     try {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-      console.log('✅ Cleared auth_token');
+      await AsyncStorage.removeItem(PUBLIC_KEY_KEY);
+      console.log('✅ Cleared auth_token and publicKey');
     } catch (error) {
-      console.error('Error clearing auth token:', error);
+      console.error('Error clearing auth data:', error);
     }
   }, []);
 
