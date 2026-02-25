@@ -56,11 +56,11 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     
     if (status !== 'granted') {
-      Alert.alert(
-        'Permission Required',
-        'Please grant photo library access to upload a cover image.',
-        [{ text: 'OK' }]
-      );
+      setErrorMessage({
+        title: 'Permission Required',
+        description: 'Please grant photo library access to upload a cover image.'
+      });
+      setShowErrorModal(true);
       return;
     }
 
@@ -104,7 +104,11 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
 
   const handlePublish = async () => {
     if (!title.trim()) {
-      Alert.alert('Missing Title', 'Please enter a challenge title');
+      setErrorMessage({
+        title: 'Missing Title',
+        description: 'Please enter a challenge title to continue.'
+      });
+      setShowErrorModal(true);
       return;
     }
 
@@ -114,17 +118,29 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
 
     // Validate inputs
     if (stakeAmountNum <= 0) {
-      Alert.alert('Invalid Stake', 'Please enter a valid stake amount greater than 0');
+      setErrorMessage({
+        title: 'Invalid Stake',
+        description: 'Please enter a valid stake amount greater than 0.'
+      });
+      setShowErrorModal(true);
       return;
     }
 
     if (prizePoolAmount <= 0) {
-      Alert.alert('Invalid Prize Pool', 'Please enter a valid prize pool amount greater than 0');
+      setErrorMessage({
+        title: 'Invalid Prize Pool',
+        description: 'Please enter a valid prize pool amount greater than 0.'
+      });
+      setShowErrorModal(true);
       return;
     }
 
     if (maxParticipantsNum <= 0) {
-      Alert.alert('Invalid Max Participants', 'Please enter a valid number of participants (at least 1)');
+      setErrorMessage({
+        title: 'Invalid Max Participants',
+        description: 'Please enter a valid number of participants (at least 1).'
+      });
+      setShowErrorModal(true);
       return;
     }
 
@@ -283,7 +299,11 @@ export const CreateChallengeScreen = ({ navigation }: any) => {
         errorMsg = error.message;
       }
 
-      Alert.alert('Error', errorMsg, [{ text: 'OK' }]);
+      setErrorMessage({
+        title: 'Error',
+        description: errorMsg
+      });
+      setShowErrorModal(true);
     }
   };
 

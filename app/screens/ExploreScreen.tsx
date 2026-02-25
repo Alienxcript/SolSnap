@@ -136,10 +136,9 @@ export const ExploreScreen = ({ navigation }: any) => {
               </View>
               
               {trendingSnaps.map((snap) => (
-                <TouchableOpacity
+                <View
                   key={snap.id}
                   style={styles.trendingCard}
-                  activeOpacity={0.85}
                 >
                   <Image
                     source={{ uri: snap.image }}
@@ -170,7 +169,7 @@ export const ExploreScreen = ({ navigation }: any) => {
                       <Text style={styles.trendingTime}>{snap.timeAgo}</Text>
                     </View>
                   </View>
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
 
@@ -182,11 +181,9 @@ export const ExploreScreen = ({ navigation }: any) => {
               </View>
               
               {topChallenges.map((challenge) => (
-                <TouchableOpacity
+                <View
                   key={challenge.id}
                   style={styles.topChallengeCard}
-                  onPress={() => navigation.navigate('ChallengeDetail', { challengeId: challenge.id })}
-                  activeOpacity={0.85}
                 >
                   <View style={styles.rankContainer}>
                     <Text style={[styles.rankNumber, { color: getRankColor(challenge.rank) }]}>
@@ -216,7 +213,7 @@ export const ExploreScreen = ({ navigation }: any) => {
                   >
                     <Text style={styles.topChallengeStakeText}>◎ {challenge.stake}</Text>
                   </LinearGradient>
-                </TouchableOpacity>
+                </View>
               ))}
             </View>
           </>

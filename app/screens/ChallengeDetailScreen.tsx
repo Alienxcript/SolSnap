@@ -21,6 +21,7 @@ import {
   Clock,
   CheckCircle,
   X,
+  AlertCircle,
 } from 'lucide-react-native';
 import { PublicKey, Transaction, SystemProgram, LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
@@ -45,6 +46,8 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
   const [paymentMethod] = useState<'SOL' | 'SKR'>('SOL');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState({ title: '', description: '' });
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState({ title: '', description: '' });
 
   const CHALLENGE_VAULT = new PublicKey('WTCyq1nqnpmMaha3MxpQEstauF3t4jeezX6PvvQivd8');
   const connection = new (require('@solana/web3.js')).Connection('https://api.devnet.solana.com', 'confirmed');
@@ -62,20 +65,22 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
 
   const handleJoinChallenge = async () => {
     if (!isConnected || !publicKey) {
-      Alert.alert('Wallet Not Connected', 'Please connect your wallet first', [
-        { text: 'Connect', onPress: connect },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      setErrorMessage({
+        title: 'Wallet Not Connected',
+        description: 'Please connect your wallet first to join this challenge.'
+      });
+      setShowErrorModal(true);
       return;
     }
 
     const requiredAmount = challenge.stakeAmount;
     
     if (balance === null || balance < requiredAmount) {
-      Alert.alert(
-        'Insufficient Balance',
-        `You need ${requiredAmount} SOL to join this challenge. Current balance: ${balance?.toFixed(4) || 0} SOL`
-      );
+      setErrorMessage({
+        title: 'Insufficient Balance',
+        description: `You need ${requiredAmount} SOL to join this challenge.\n\nYour current balance: ${balance?.toFixed(4) || 0} SOL`
+      });
+      setShowErrorModal(true);
       return;
     }
 
@@ -166,7 +171,11 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
         msg = error.message;
       }
       
-      Alert.alert('Failed', msg, [{ text: 'OK' }]);
+      setErrorMessage({
+        title: 'Transaction Failed',
+        description: msg
+      });
+      setShowErrorModal(true);
     } finally {
       setIsJoining(false);
     }
@@ -351,6 +360,39 @@ export const ChallengeDetailScreen = ({ route, navigation }: any) => {
               >
                 <Text style={styles.successButtonText}>OK</Text>
               </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setShowErrorModal(false)}>
+          <View style={styles.errorModalContent}>
+            <TouchableOpacity 
+              style={styles.modalClose}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <X size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.errorIcon}>
+              <AlertCircle size={48} color="#FF6B6B" />
+            </View>
+            
+            <Text style={styles.errorTitle}>{errorMessage.title}</Text>
+            <Text style={styles.errorDescription}>{errorMessage.description}</Text>
+            
+            <TouchableOpacity 
+              style={styles.errorButton}
+              onPress={() => setShowErrorModal(false)}
+            >
+              <Text style={styles.errorButtonText}>OK</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -691,5 +733,50 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#000000',
+  },
+  errorModalContent: {
+    backgroundColor: '#141414',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#1F1F1F',
+    padding: 32,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  errorIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  errorDescription: {
+    fontSize: 14,
+    color: '#AAAAAA',
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorButton: {
+    width: '100%',
+    backgroundColor: '#FF6B6B',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  errorButtonText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
   },
 });
