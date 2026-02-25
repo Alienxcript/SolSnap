@@ -107,7 +107,6 @@ export const ProfileScreen = ({ navigation }: any) => {
           </View>
 
           <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <>
             {/* Wallet Card */}
             <View style={styles.walletCard}>
               <View style={styles.walletTop}>
@@ -331,12 +330,8 @@ export const ProfileScreen = ({ navigation }: any) => {
                 </View>
               )}
             </View>
-          </>
-        ) : (
-          null
-        )}
-      </ScrollView>
-    </>
+          </ScrollView>
+        </>
       ) : (
         // Not Connected - Outside ScrollView for proper centering
         <View style={styles.notConnectedFullscreen}>
