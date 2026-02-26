@@ -317,38 +317,6 @@ npx expo run:android
 
 ---
 
-## 📸 Adding Screenshots to GitHub
-
-To add your screenshots to the README:
-
-1. **Create screenshots folder:**
-   ```bash
-   mkdir screenshots
-   ```
-
-2. **Move images to folder:**
-   ```bash
-   # Copy your screenshot files
-   mv Home_screen.png screenshots/
-   mv Challenge_detail.png screenshots/
-   mv Profile_page.png screenshots/
-   mv Create_challenge.png screenshots/
-   mv Uploaf_proof.png screenshots/
-   mv Explore_page.png screenshots/
-   ```
-
-3. **Commit to git:**
-   ```bash
-   git add screenshots/
-   git add README.md
-   git commit -m "docs: add app screenshots and update README"
-   git push
-   ```
-
-Screenshots will now display in your GitHub README!
-
----
-
 ## 🐛 Troubleshooting
 
 ### Build Issues
