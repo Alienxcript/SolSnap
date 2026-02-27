@@ -376,7 +376,7 @@ Built by:
 
 ## 📞 Contact & Links
  
-- **X** : [Nova](https://x.com/Novachrome_x377)
+- **X** : [Nova](https://x.com/Novachrome_x377) || [Endless](https://x.com/DAOnamite)
 - **GitHub:** [github.com/Alienxcript/SolSnap](https://github.com/Alienxcript/SolSnap)
 - **Demo Video:** Coming soon
 - **Hackathon:** Monolith: Solana Mobile Hackathon 2026
