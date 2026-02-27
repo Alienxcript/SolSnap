@@ -353,8 +353,6 @@ eas build:view <BUILD_ID>
 
 MIT License - Free to use for learning and building!
 
-See [LICENSE](./LICENSE) for details.
-
 ---
 
 ## 🙏 Acknowledgments
@@ -369,7 +367,7 @@ See [LICENSE](./LICENSE) for details.
 
 ## 👥 Developers
 
-Built with ❤️ by:
+Built by:
 
 - **[Alienxcript](https://github.com/Alienxcript)** 
 - **[EndLes5](https://github.com/EndLes5)**
@@ -377,7 +375,8 @@ Built with ❤️ by:
 ---
 
 ## 📞 Contact & Links
-
+ 
+- **X** : [Nova](https://x.com/Novachrome_x377)
 - **GitHub:** [github.com/Alienxcript/SolSnap](https://github.com/Alienxcript/SolSnap)
 - **Demo Video:** Coming soon
 - **Hackathon:** Monolith: Solana Mobile Hackathon 2026
