@@ -38,3 +38,21 @@ yarn-error.*
 # Build artifacts
 android/
 ios/
+
+# Pitch deck — HTML presentations
+solsnap-pitch.html
+solsnap-pitch-solana.html
+solsnap-pitch-hybrid.html
+
+# Pitch deck — PDFs
+solsnap-pitch.pdf
+solsnap-pitch-solana.pdf
+solsnap-pitch-hybrid.pdf
+
+build_pptx.py
+solsnap-pitch.pptx
+
+CLAUDE.md
+.claude/
+
+file_list.txt
