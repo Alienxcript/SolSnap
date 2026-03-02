@@ -56,3 +56,5 @@ CLAUDE.md
 .claude/
 
 file_list.txt
+
+*.tar.gz
